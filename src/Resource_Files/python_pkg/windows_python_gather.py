@@ -163,9 +163,9 @@ def compile_libs():
                 y = os.path.join(x[0], f)
                 rel = os.path.relpath(y, lib_dir)
                 try:
-                    py_compile.compile(y, cfile=y+'c',dfile=rel, doraise=True, optimize=2)
+                    py_compile.compile(y, cfile=y+'o',dfile=rel, doraise=True, optimize=2)
                     os.remove(y)
-                    z = y+'o'
+                    z = y+'c'
                     if os.path.exists(z):
                         os.remove(z)
                 except:
