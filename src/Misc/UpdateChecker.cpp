@@ -52,6 +52,9 @@ UpdateChecker::UpdateChecker(QObject *parent)
 
 void UpdateChecker::CheckForUpdate()
 {
+    // skip update check on legacy version
+    return;
+#if 0
     SettingsStore settings;
     settings.beginGroup(SETTINGS_GROUP);
 
@@ -110,6 +113,7 @@ void UpdateChecker::CheckForUpdate()
         settings.setValue(LAST_ONLINE_VERSION_KEY, current_online_version);
         settings.endGroup();
     }
+#endif
 }
 
 
