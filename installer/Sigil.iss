@@ -17,10 +17,10 @@ Compression=lzma2/ultra
 SolidCompression=yes
 OutputDir=..\installer
 LicenseFile=${LICENSE_LOCATION}
-; Win 7sp1 is the lowest supported version
-MinVersion=0,6.1.7601
+; Win XP is the lowest supported version
+MinVersion=0,5.1
 PrivilegesRequired=admin
-OutputBaseFilename=Sigil-${SIGIL_FULL_VERSION}-Windows${ISS_SETUP_FILENAME_PLATFORM}-Setup
+OutputBaseFilename=Sigil-${SIGIL_FULL_VERSION}-Legacy-Windows${ISS_SETUP_FILENAME_PLATFORM}-Setup
 ChangesAssociations=yes
 
 ; "ArchitecturesAllowed=x64" specifies that Setup cannot run on
@@ -35,7 +35,8 @@ ArchitecturesInstallIn64BitMode="${ISS_ARCH}"
 
 [Files]
 Source: "Sigil\*"; DestDir: "{app}"; Flags: createallsubdirs recursesubdirs ignoreversion
-Source: vendor\vcredist2015.exe; DestDir: {tmp}
+Source: vendor\vcredist2010.exe; DestDir: {tmp}
+Source: vendor\vcredist2013.exe; DestDir: {tmp}
 
 [Components]
 ; Main files cannot be unchecked. Doesn't do anything, just here for show
@@ -81,14 +82,19 @@ Type: filesandordirs; Name: "{app}\Scripts"
 ; So remove the old name if present.
 Type: files; Name: "{app}\sigil-python3.exe"
 
+[UninstallDelete]
+; Remove any compiled launcher folders/files created after installation
+Type: filesandordirs; Name: "{app}\plugin_launchers\python"
+
 [Run]
 ; The following command detects whether or not the c++ runtime need to be installed.
-Filename: {tmp}\vcredist2015.exe; Check: NeedsVC2015RedistInstall; Parameters: "/passive /Q:a /c:""msiexec /qb /i vcredist2015.msi"" "; StatusMsg: Checking for VS 2015 RunTime ...
+Filename: {tmp}\vcredist2010.exe; Check: NeedsVC2010RedistInstall; Parameters: "/passive /Q:a /c:""msiexec /qb /i vcredist2010.msi"" "; StatusMsg: Checking for 2010 RunTime for Python...
+Filename: {tmp}\vcredist2013.exe; Check: NeedsVC2013RedistInstall; Parameters: "/passive /Q:a /c:""msiexec /qb /i vcredist2013.msi"" "; StatusMsg: Checking for VS 2013 RunTime ...
 
 [Code]
 
-function NeedsVC2015RedistInstall: Boolean;
-// Return True if VS 2015 redist included with Sigil Installer needs to be run.
+function NeedsVC2010RedistInstall: Boolean;
+// Return True if VS 2010 redist included with Sigil Installer needs to be run.
 var
   reg_key, installed_ver: String;
 begin
@@ -96,14 +102,35 @@ begin
 
   if IsWin64 and not Is64BitInstallMode then
     // 32-bit version being installed on 64-bit machine
-    reg_key := 'SOFTWARE\WoW6432Node\Microsoft\DevDiv\vc\servicing\14.0\RuntimeMinimum'
+    reg_key := 'SOFTWARE\WoW6432Node\Microsoft\DevDiv\vc\servicing\10.0\red\1033'
   else
-    reg_key := 'SOFTWARE\Microsoft\DevDiv\vc\servicing\14.0\RuntimeMinimum';
+    reg_key := 'SOFTWARE\Microsoft\DevDiv\vc\servicing\10.0\red\1033';
 
-  // If there's a VS2015 compatible version of the runtime already installed; use it.
+  // If there's a VS2010 compatible version of the runtime already installed; use it.
   if RegQueryStringValue(HKEY_LOCAL_MACHINE, reg_key, 'Version', installed_ver) then
     begin
-      //MsgBox('Installed version: ' + installed_ver, mbInformation, MB_OK);
+      MsgBox('Installed version: ' + installed_ver, mbInformation, MB_OK);
+      Result := False;
+    end
+ end;
+
+function NeedsVC2013RedistInstall: Boolean;
+// Return True if VS 2013 redist included with Sigil Installer needs to be run.
+var
+  reg_key, installed_ver: String;
+begin
+  Result := True;
+
+  if IsWin64 and not Is64BitInstallMode then
+    // 32-bit version being installed on 64-bit machine
+    reg_key := 'SOFTWARE\WoW6432Node\Microsoft\DevDiv\vc\servicing\12.0\RuntimeMinimum'
+  else
+    reg_key := 'SOFTWARE\Microsoft\DevDiv\vc\servicing\12.0\RuntimeMinimum';
+
+  // If there's a VS2013 compatible version of the runtime already installed; use it.
+  if RegQueryStringValue(HKEY_LOCAL_MACHINE, reg_key, 'Version', installed_ver) then
+    begin
+      MsgBox('Installed version: ' + installed_ver, mbInformation, MB_OK);
       Result := False;
     end
  end;
