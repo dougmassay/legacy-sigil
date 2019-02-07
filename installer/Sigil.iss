@@ -109,7 +109,7 @@ begin
   // If there's a VS2010 compatible version of the runtime already installed; use it.
   if RegQueryStringValue(HKEY_LOCAL_MACHINE, reg_key, 'Version', installed_ver) then
     begin
-      MsgBox('Installed version: ' + installed_ver, mbInformation, MB_OK);
+      //MsgBox('Installed version: ' + installed_ver, mbInformation, MB_OK);
       Result := False;
     end
  end;
@@ -130,7 +130,7 @@ begin
   // If there's a VS2013 compatible version of the runtime already installed; use it.
   if RegQueryStringValue(HKEY_LOCAL_MACHINE, reg_key, 'Version', installed_ver) then
     begin
-      MsgBox('Installed version: ' + installed_ver, mbInformation, MB_OK);
+      //MsgBox('Installed version: ' + installed_ver, mbInformation, MB_OK);
       Result := False;
     end
  end;
