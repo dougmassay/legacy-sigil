@@ -17,10 +17,10 @@ Compression=lzma2/ultra
 SolidCompression=yes
 OutputDir=..\installer
 LicenseFile=${LICENSE_LOCATION}
-; Win 7sp1 is the lowest supported version
-MinVersion=0,6.1.7601
+; Win XP is the lowest supported version
+MinVersion=0,5.1
 PrivilegesRequired=admin
-OutputBaseFilename=Sigil-${SIGIL_FULL_VERSION}-Windows${ISS_SETUP_FILENAME_PLATFORM}-Setup
+OutputBaseFilename=Sigil-${SIGIL_FULL_VERSION}-Legacy-Windows${ISS_SETUP_FILENAME_PLATFORM}-Setup
 ChangesAssociations=yes
 
 ; "ArchitecturesAllowed=x64" specifies that Setup cannot run on
@@ -35,7 +35,8 @@ ArchitecturesInstallIn64BitMode="${ISS_ARCH}"
 
 [Files]
 Source: "Sigil\*"; DestDir: "{app}"; Flags: createallsubdirs recursesubdirs ignoreversion
-Source: vendor\vcredist.exe; DestDir: {tmp}
+Source: vendor\vcredist2010.exe; DestDir: {tmp}
+Source: vendor\vcredist2013.exe; DestDir: {tmp}
 
 [Components]
 ; Main files cannot be unchecked. Doesn't do anything, just here for show
@@ -81,89 +82,54 @@ Type: filesandordirs; Name: "{app}\Scripts"
 ; So remove the old name if present.
 Type: files; Name: "{app}\sigil-python3.exe"
 
+[UninstallDelete]
+; Remove any compiled launcher folders/files created after installation
+Type: filesandordirs; Name: "{app}\plugin_launchers\python"
+
 [Run]
 ; The following command detects whether or not the c++ runtime need to be installed.
-Filename: {tmp}\vcredist.exe; Check: NeedsVCRedistInstall; Parameters: "/passive /Q:a /c:""msiexec /qb /i vcredist.msi"" "; StatusMsg: Checking for VC++ RunTime ...
+Filename: {tmp}\vcredist2010.exe; Check: NeedsVC2010RedistInstall; Parameters: "/passive /Q:a /c:""msiexec /qb /i vcredist2010.msi"" "; StatusMsg: Checking for 2010 RunTime for Python...
+Filename: {tmp}\vcredist2013.exe; Check: NeedsVC2013RedistInstall; Parameters: "/passive /Q:a /c:""msiexec /qb /i vcredist2013.msi"" "; StatusMsg: Checking for VS 2013 RunTime ...
 
 [Code]
 
-function CompareVersion(V1, V2: string): Integer;
-// Compare version strings
-// Returns 0, if the versions are equal.
-// Returns -1, if the V1 is older than the V2.
-// Returns 1, if the V1 is newer than the V2.
+function NeedsVC2010RedistInstall: Boolean;
+// Return True if VS 2010 redist included with Sigil Installer needs to be run.
 var
-  P, N1, N2: Integer;
-begin
-  Result := 0;
-  while (Result = 0) and ((V1 <> '') or (V2 <> '')) do
-  begin
-    P := Pos('.', V1);
-    if P > 0 then
-    begin
-      N1 := StrToInt(Copy(V1, 1, P - 1));
-      Delete(V1, 1, P);
-    end
-      else
-    if V1 <> '' then
-    begin
-      N1 := StrToInt(V1);
-      V1 := '';
-    end
-      else
-    begin
-      N1 := 0;
-    end;
-
-    P := Pos('.', V2);
-    if P > 0 then
-    begin
-      N2 := StrToInt(Copy(V2, 1, P - 1));
-      Delete(V2, 1, P);
-    end
-      else
-    if V2 <> '' then
-    begin
-      N2 := StrToInt(V2);
-      V2 := '';
-    end
-      else
-    begin
-      N2 := 0;
-    end;
-
-    if N1 < N2 then Result := -1
-      else
-    if N1 > N2 then Result := 1;
-  end;
-end;
-
-function NeedsVCRedistInstall: Boolean;
-// Return True if VC++ redist included with Sigil Installer needs to be installed.
-var
-  reg_key, installed_ver, min_ver: String;
-  R: Integer;
+  reg_key, installed_ver: String;
 begin
   Result := True;
-  // Mimimum version of the VC++ Redistributable needed (currently VS2017 and later).
-  min_ver := '14.10.00000';
+
   if IsWin64 and not Is64BitInstallMode then
     // 32-bit version being installed on 64-bit machine
-    reg_key := 'SOFTWARE\WoW6432Node\Microsoft\DevDiv\vc\servicing\14.0\RuntimeMinimum'
+    reg_key := 'SOFTWARE\WoW6432Node\Microsoft\DevDiv\vc\servicing\10.0\red\1033'
   else
-    reg_key := 'SOFTWARE\Microsoft\DevDiv\vc\servicing\14.0\RuntimeMinimum';
+    reg_key := 'SOFTWARE\Microsoft\DevDiv\vc\servicing\10.0\red\1033';
 
-  // If there's a compatible version of the 14.XX runtime already installed; use it.
+  // If there's a VS2010 compatible version of the runtime already installed; use it.
   if RegQueryStringValue(HKEY_LOCAL_MACHINE, reg_key, 'Version', installed_ver) then
     begin
-      //MsgBox('Registry key: ' + reg_key, mbInformation, MB_OK);
       //MsgBox('Installed version: ' + installed_ver, mbInformation, MB_OK);
-      //MsgBox('Minimum version: ' + min_ver, mbInformation, MB_OK);
-      R := CompareVersion(installed_ver, min_ver);
-      // If installed VC++ runtime version is equal or newer than
-      // the minimum version specified, then don't run
-      // the bundled VC++ redistributable installer
-      if R >= 0 then
-        Result := False;
+      Result := False;
+    end
+ end;
+
+function NeedsVC2013RedistInstall: Boolean;
+// Return True if VS 2013 redist included with Sigil Installer needs to be run.
+var
+  reg_key, installed_ver, min_ver: String;
+begin
+  Result := True;
+  if IsWin64 and not Is64BitInstallMode then
+    // 32-bit version being installed on 64-bit machine
+    reg_key := 'SOFTWARE\WoW6432Node\Microsoft\DevDiv\vc\servicing\12.0\RuntimeMinimum'
+  else
+    reg_key := 'SOFTWARE\Microsoft\DevDiv\vc\servicing\12.0\RuntimeMinimum';
+
+  // If there's a VS2013 compatible version of the runtime already installed; use it.
+  if RegQueryStringValue(HKEY_LOCAL_MACHINE, reg_key, 'Version', installed_ver) then
+    begin
+      //MsgBox('Installed version: ' + installed_ver, mbInformation, MB_OK);
+      Result := False;
     end
  end;
